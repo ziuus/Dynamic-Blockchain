@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Blockchain - Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        :root {
+            --navy: #0a0e27;
+            --navy-light: #0d1535;
+            --purple: #1a103d;
+            --cyan: #00f5ff;
+            --cyan-dim: #00a8b3;
+            --green: #00ff88;
+            --green-dim: #00b366;
+            --gray: #666;
+            --gray-dim: #444;
+            --glass: rgba(10, 14, 39, 0.6);
+            --glass-border: rgba(0, 245, 255, 0.2);
+            --text: #e0e0ff;
+            --text-dim: #a0a0d0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--navy);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated Background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(ellipse at 20% 80%, rgba(0, 245, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(0, 255, 136, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(120, 0, 255, 0.1) 0%, transparent 70%),
+                linear-gradient(135deg, var(--navy) 0%, var(--purple) 100%);
+            z-index: -1;
+            animation: bgShift 20s ease-in-out infinite;
+        }
+
+        @keyframes bgShift {
+            0%, 100% { filter: hue-rotate(0deg); }
+            50% { filter: hue-rotate(180deg); }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--navy-light); }
+        ::-webkit-scrollbar-thumb { background: var(--cyan-dim); border-radius: 3px; }
+
+        /* Header */
+        .header {
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--cyan), var(--green));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 18px;
+            color: var(--navy);
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--green);
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.offline { background: var(--gray); animation: none; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        /* Network Stats Bar */
+        .stats-bar {
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+            flex-wrap: wrap;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 20px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            min-width: 140px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--cyan);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Main Layout */
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px 40px;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            grid-template-rows: auto auto;
+            gap: 20px;
+        }
+
+        @media (max-width: 1200px) {
+            .container { grid-template-columns: 1fr; }
+        }
+
+        /* Panels */
+        .panel {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(to bottom, var(--cyan), var(--green));
+            border-radius: 2px;
+        }
+
+        .panel-actions { display: flex; gap: 10px; }
+
+        /* Scrollable Lists */
+        .scroll-list {
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .scroll-list::-webkit-scrollbar { width: 6px; }
+        .scroll-list::-webkit-scrollbar-thumb { background: var(--cyan-dim); }
+
+        /* Block Item */
+        .block-item {
+            display: flex;
+            gap: 15px;
+            padding: 15px;
+            background: rgba(0, 245, 255, 0.05);
+            border: 1px solid rgba(0, 245, 255, 0.1);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            animation: slideIn 0.3s ease-out;
+            opacity: 0;
+        }
+
+        .block-item.visible { opacity: 1; }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .block-index {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: var(--cyan);
+            min-width: 60px;
+        }
+
+        .block-hash {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--text-dim);
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .block-tx {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: var(--green);
+            min-width: 80px;
+        }
+
+        .block-time {
+            font-size: 12px;
+            color: var(--text-dim);
+            min-width: 120px;
+            text-align: right;
+        }
+
+        /* Tx Item */
+        .tx-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background: rgba(0, 255, 136, 0.05);
+            border: 1px solid rgba(0, 255, 136, 0.1);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            animation: slideIn 0.3s ease-out;
+            opacity: 0;
+        }
+
+        .tx-item.visible { opacity: 1; }
+
+        .tx-hash {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--green);
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tx-amount {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: var(--cyan);
+        }
+
+        /* Channel Item */
+        .channel-item {
+            padding: 15px;
+            background: rgba(120, 0, 255, 0.05);
+            border: 1px solid rgba(120, 0, 255, 0.1);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            animation: slideIn 0.3s ease-out;
+            opacity: 0;
+        }
+
+        .channel-item.visible { opacity: 1; }
+
+        .channel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .channel-id {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: var(--cyan);
+        }
+
+        .channel-status {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .channel-status.open { background: rgba(0, 245, 255, 0.2); color: var(--cyan); }
+        .channel-status.closed { background: rgba(100, 100, 100, 0.2); color: var(--gray); }
+
+        .channel-participants {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+        }
+
+        .channel-balance {
+            display: flex;
+            gap: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+        }
+
+        .channel-balance span {
+            color: var(--green);
+        }
+
+        /* Node Status */
+        .node-info {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .node-info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 15px;
+            background: rgba(0, 245, 255, 0.05);
+            border-radius: 8px;
+        }
+
+        .node-info-label {
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+
+        .node-info-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: var(--cyan);
+        }
+
+        /* Quick Actions */
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 600px) {
+            .actions { grid-template-columns: 1fr; }
+        }
+
+        .action-btn {
+            padding: 15px 25px;
+            background: linear-gradient(135deg, var(--cyan), var(--green));
+            border: none;
+            border-radius: 10px;
+            color: var(--navy);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 245, 255, 0.3);
+        }
+
+        .action-btn:active {
+            transform: translateY(0);
+        }
+
+        .action-btn.secondary {
+            background: linear-gradient(135deg, var(--gray-dim), var(--navy-light));
+            color: var(--text);
+        }
+
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* TPS Counter */
+        .tps-counter {
+            padding: 15px;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .tps-label {
+            font-size: 12px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        .tps-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--green);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            padding: 15px 25px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            animation: slideUp 0.3s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .toast.success { border-color: var(--green); }
+        .toast.error { border-color: #ff4444; }
+        .toast.info { border-color: var(--cyan); }
+
+        .toast-icon {
+            font-size: 20px;
+        }
+
+        .toast-message {
+            font-size: 14px;
+            flex: 1;
+        }
+
+        /* Loading Skeletons */
+        .skeleton {
+            background: linear-gradient(90deg, var(--glass-border) 25%, transparent 50%, var(--glass-border) 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: 4px;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .skeleton-text { height: 16px; margin-bottom: 8px; }
+        .skeleton-title { height: 24px; width: 60%; margin-bottom: 15px; }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-dim);
+        }
+
+        .empty-state-icon {
+            font-size: 40px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header { padding: 15px 20px; }
+            .stats-bar { padding: 10px 20px; gap: 10px; }
+            .stat-item { min-width: 100px; padding: 8px 12px; }
+            .container { padding: 15px 20px; }
+            .stats-bar { flex-direction: column; align-items: center; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">DB</div>
+            <span>Dynamic Blockchain</span>
+        </div>
+        <div class="status-badge">
+            <div class="status-indicator" id="nodeStatusIndicator"></div>
+            <span id="nodeStatusText">Connecting...</span>
+        </div>
+    </header>
+
+    <div class="stats-bar" id="statsBar">
+        <div class="stat-item">
+            <div class="stat-label">Block Height</div>
+            <div class="stat-value" id="blockHeight">-</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-label">Pending TXs</div>
+            <div class="stat-value" id="pendingTxs">-</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-label">Connected Peers</div>
+            <div class="stat-value" id="connectedPeers">-</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-label">Active Channels</div>
+            <div class="stat-value" id="activeChannels">-</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-label">TPS</div>
+            <div class="stat-value" id="tpsValue">-</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Main Chain Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Main Chain</h2>
+                <span class="block-index" id="latestBlockIndex">-</span>
+            </div>
+            <div class="scroll-list" id="blocksList">
+                <div class="skeleton skeleton-title"></div>
+                <div class="skeleton skeleton-text" style="width: 80%; margin-bottom: 10px;"></div>
+                <div class="skeleton skeleton-text" style="width: 60%; margin-bottom: 10px;"></div>
+                <div class="skeleton skeleton-text" style="width: 70%;"></div>
+            </div>
+        </div>
+
+        <!-- Mempool Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Mempool</h2>
+                <span id="mempoolCount">0</span>
+            </div>
+            <div class="scroll-list" id="mempoolList">
+                <div class="skeleton skeleton-title"></div>
+                <div class="skeleton skeleton-text" style="width: 80%; margin-bottom: 10px;"></div>
+                <div class="skeleton skeleton-text" style="width: 60%;"></div>
+            </div>
+        </div>
+
+        <!-- Ephemeral Channels Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Ephemeral Channels</h2>
+                <span id="channelsCount">0</span>
+            </div>
+            <div class="scroll-list" id="channelsList">
+                <div class="skeleton skeleton-title"></div>
+                <div class="skeleton skeleton-text" style="width: 80%; margin-bottom: 10px;"></div>
+                <div class="skeleton skeleton-text" style="width: 60%; margin-bottom: 10px;"></div>
+                <div class="skeleton skeleton-text" style="width: 70%;"></div>
+            </div>
+        </div>
+
+        <!-- Node Status Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Node Status</h2>
+            </div>
+            <div class="node-info">
+                <div class="node-info-item">
+                    <span class="node-info-label">Address</span>
+                    <span class="node-info-value" id="nodeAddress">-</span>
+                </div>
+                <div class="node-info-item">
+                    <span class="node-info-label">Port</span>
+                    <span class="node-info-value" id="nodePort">-</span>
+                </div>
+                <div class="node-info-item">
+                    <span class="node-info-label">Uptime</span>
+                    <span class="node-info-value" id="nodeUptime">-</span>
+                </div>
+                <div class="node-info-item">
+                    <span class="node-info-label">Version</span>
+                    <span class="node-info-value" id="nodeVersion">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Quick Actions</h2>
+            </div>
+            <div class="actions">
+                <button class="action-btn" id="mineBtn" onclick="mineBlock()">
+                    <span>&#x26cf;</span>
+                    Mine Block
+                </button>
+                <button class="action-btn" id="channelBtn" onclick="openChannel()">
+                    <span>&#x25c8;</span>
+                    Open Channel
+                </button>
+                <button class="action-btn secondary" id="refreshBtn" onclick="refreshData()">
+                    <span>&#x21bb;</span>
+                    Refresh
+                </button>
+                <button class="action-btn secondary" id="clearBtn" onclick="clearToasts()">
+                    <span>&#x2715;</span>
+                    Clear Toasts
+                </button>
+            </div>
+        </div>
+
+        <!-- TPS Counter Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Transactions Per Second</h2>
+            </div>
+            <div class="tps-counter">
+                <div class="tps-label">Current TPS</div>
+                <div class="tps-value" id="tpsDisplay">0.00</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // State
+        let blocks = [];
+        let mempool = [];
+        let channels = [];
+        let stats = {};
+        let lastBlockCount = 0;
+        let lastTxCount = 0;
+        let txHistory = [];
+        const MAX_TX_HISTORY = 10;
+
+        // API Configuration
+        const API_BASE = 'http://localhost:3000/api';
+        const POLL_INTERVAL = 3000;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            gsap.config({ nullTargetWarn: false });
+            loadData();
+            startPolling();
+            setupAnimations();
+        });
+
+        // Load initial data
+        async function loadData() {
+            try {
+                await Promise.all([
+                    fetchBlocks(),
+                    fetchMempool(),
+                    fetchChannels(),
+                    fetchStats(),
+                    fetchNodeStatus()
+                ]);
+                updateNodeStatus(true);
+            } catch (error) {
+                showToast('Error loading data: ' + error.message, 'error');
+                updateNodeStatus(false);
+            }
+        }
+
+        // Poll data periodically
+        function startPolling() {
+            setInterval(() => {
+                fetchBlocks();
+                fetchMempool();
+                fetchChannels();
+                fetchStats();
+            }, POLL_INTERVAL);
+        }
+
+        // Fetch blocks
+        async function fetchBlocks() {
+            try {
+                const response = await fetch(`${API_BASE}/blocks?limit=20`);
+                if (!response.ok) throw new Error('Failed to fetch blocks');
+                const data = await response.json();
+                
+                if (JSON.stringify(blocks) !== JSON.stringify(data)) {
+                    const newBlocks = data.filter(b => !blocks.some(existing => existing.hash === b.hash));
+                    blocks = data;
+                    renderBlocks(newBlocks);
+                    
+                    // Update latest block index in header
+                    if (blocks.length > 0) {
+                        document.getElementById('latestBlockIndex').textContent = blocks[0].index || blocks[0].height || '0';
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching blocks:', error);
+            }
+        }
+
+        // Fetch mempool
+        async function fetchMempool() {
+            try {
+                const response = await fetch(`${API_BASE}/mempool`);
+                if (!response.ok) throw new Error('Failed to fetch mempool');
+                const data = await response.json();
+                
+                if (JSON.stringify(mempool) !== JSON.stringify(data)) {
+                    const newTxs = data.filter(t => !mempool.some(existing => existing.hash === t.hash));
+                    mempool = data;
+                    renderMempool(newTxs);
+                    document.getElementById('mempoolCount').textContent = mempool.length;
+                    document.getElementById('pendingTxs').textContent = mempool.length;
+                }
+            } catch (error) {
+                console.error('Error fetching mempool:', error);
+            }
+        }
+
+        // Fetch channels
+        async function fetchChannels() {
+            try {
+                const response = await fetch(`${API_BASE}/channels`);
+                if (!response.ok) throw new Error('Failed to fetch channels');
+                const data = await response.json();
+                
+                if (JSON.stringify(channels) !== JSON.stringify(data)) {
+                    channels = data;
+                    renderChannels();
+                    document.getElementById('channelsCount').textContent = channels.length;
+                    document.getElementById('activeChannels').textContent = channels.filter(c => c.status === 'open').length;
+                }
+            } catch (error) {
+                console.error('Error fetching channels:', error);
+            }
+        }
+
+        // Fetch stats
+        async function fetchStats() {
+            try {
+                const response = await fetch(`${API_BASE}/stats`);
+                if (!response.ok) throw new Error('Failed to fetch stats');
+                const data = await response.json();
+                
+                stats = data;
+                updateStats();
+                calculateTPS();
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+            }
+        }
+
+        // Fetch node status
+        async function fetchNodeStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/node/status`);
+                if (!response.ok) throw new Error('Failed to fetch node status');
+                const data = await response.json();
+                
+                document.getElementById('nodeAddress').textContent = data.address || '-';
+                document.getElementById('nodePort').textContent = data.port || '-';
+                document.getElementById('nodeUptime').textContent = formatUptime(data.uptime || 0);
+                document.getElementById('nodeVersion').textContent = data.version || '-';
+                document.getElementById('connectedPeers').textContent = data.peers || '0';
+            } catch (error) {
+                console.error('Error fetching node status:', error);
+            }
+        }
+
+        // Update stats display
+        function updateStats() {
+            if (stats.blockHeight !== undefined) {
+                document.getElementById('blockHeight').textContent = stats.blockHeight;
+            }
+            if (stats.connectedPeers !== undefined) {
+                document.getElementById('connectedPeers').textContent = stats.connectedPeers;
+            }
+        }
+
+        // Calculate TPS
+        function calculateTPS() {
+            const now = Date.now();
+            
+            // Add current counts to history
+            txHistory.push({
+                timestamp: now,
+                blockCount: blocks.length,
+                txCount: mempool.length
+            });
+            
+            // Keep only recent history
+            if (txHistory.length > MAX_TX_HISTORY) {
+                txHistory.shift();
+            }
+            
+            // Calculate TPS if we have enough data
+            if (txHistory.length >= 2) {
+                const oldest = txHistory[0];
+                const newest = txHistory[txHistory.length - 1];
+                const timeDiff = (newest.timestamp - oldest.timestamp) / 1000; // seconds
+                
+                if (timeDiff > 0) {
+                    const txDiff = newest.txCount - oldest.txCount;
+                    const blockDiff = newest.blockCount - oldest.blockCount;
+                    const tps = (txDiff + blockDiff) / timeDiff;
+                    
+                    document.getElementById('tpsValue').textContent = tps.toFixed(2);
+                    document.getElementById('tpsDisplay').textContent = tps.toFixed(2);
+                }
+            }
+        }
+
+        // Render blocks
+        function renderBlocks(newBlocks = []) {
+            const container = document.getElementById('blocksList');
+            
+            if (blocks.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#x25c6;</div><div>No blocks yet</div></div>';
+                return;
+            }
+
+            // Only render new blocks with animation
+            if (newBlocks.length > 0) {
+                newBlocks.forEach(block => {
+                    const blockElement = createBlockElement(block);
+                    container.insertBefore(blockElement, container.firstChild);
+                    
+                    // Animate with GSAP
+                    gsap.from(blockElement, {
+                        x: -20,
+                        opacity: 0,
+                        duration: 0.3,
+                        ease: 'power2.out',
+                        onComplete: () => {
+                            blockElement.classList.add('visible');
+                        }
+                    });
+                });
+            } else {
+                // Full render
+                container.innerHTML = blocks.map(block => createBlockElement(block).outerHTML).join('');
+                container.querySelectorAll('.block-item').forEach(el => el.classList.add('visible'));
+            }
+        }
+
+        // Create block element
+        function createBlockElement(block) {
+            const div = document.createElement('div');
+            div.className = 'block-item';
+            
+            const index = block.index || block.height || block.number || '0';
+            const hash = block.hash || block.id || '0'.repeat(64);
+            const txCount = block.transactions || block.txCount || block.txs || 0;
+            const timestamp = block.timestamp ? new Date(block.timestamp).toLocaleTimeString() : '-';
+            
+            div.innerHTML = `
+                <div class="block-index">#${index}</div>
+                <div class="block-hash" title="${hash}">${hash.substring(0, 16)}...${hash.substring(hash.length - 4)}</div>
+                <div class="block-tx">${txCount} tx(s)</div>
+                <div class="block-time">${timestamp}</div>
+            `;
+            
+            return div;
+        }
+
+        // Render mempool
+        function renderMempool(newTxs = []) {
+            const container = document.getElementById('mempoolList');
+            
+            if (mempool.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#x2713;</div><div>Mempool is empty</div></div>';
+                return;
+            }
+
+            if (newTxs.length > 0) {
+                newTxs.forEach(tx => {
+                    const txElement = createTxElement(tx);
+                    container.insertBefore(txElement, container.firstChild);
+                    
+                    gsap.from(txElement, {
+                        x: -20,
+                        opacity: 0,
+                        duration: 0.3,
+                        ease: 'power2.out',
+                        onComplete: () => {
+                            txElement.classList.add('visible');
+                        }
+                    });
+                });
+            } else {
+                container.innerHTML = mempool.map(tx => createTxElement(tx).outerHTML).join('');
+                container.querySelectorAll('.tx-item').forEach(el => el.classList.add('visible'));
+            }
+        }
+
+        // Create transaction element
+        function createTxElement(tx) {
+            const div = document.createElement('div');
+            div.className = 'tx-item';
+            
+            const hash = tx.hash || tx.id || '0'.repeat(64);
+            const amount = tx.amount || tx.value || 0;
+            
+            div.innerHTML = `
+                <div class="tx-hash" title="${hash}">${hash.substring(0, 16)}...${hash.substring(hash.length - 4)}</div>
+                <div class="tx-amount">${amount} DBC</div>
+            `;
+            
+            return div;
+        }
+
+        // Render channels
+        function renderChannels() {
+            const container = document.getElementById('channelsList');
+            
+            if (channels.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#x25c8;</div><div>No channels yet</div></div>';
+                return;
+            }
+
+            container.innerHTML = channels.map(channel => {
+                const div = document.createElement('div');
+                div.className = 'channel-item visible';
+                
+                const channelId = channel.id || channel.channelId || 'Unknown';
+                const status = channel.status || 'unknown';
+                const participants = channel.participants ? channel.participants.join(', ') : 'Unknown';
+                const balance = channel.balance || channel.balances || { local: 0, remote: 0 };
+                const offChainTxs = channel.offChainTxs || channel.offChainTransactions || 0;
+                
+                const statusClass = status.toLowerCase() === 'open' ? 'open' : 'closed';
+                
+                div.innerHTML = `
+                    <div class="channel-header">
+                        <div class="channel-id">Channel #${channelId}</div>
+                        <div class="channel-status ${statusClass}">${status}</div>
+                    </div>
+                    <div class="channel-participants">Participants: ${participants}</div>
+                    <div class="channel-balance">
+                        <span>Local: ${balance.local || 0} DBC</span>
+                        <span>Remote: ${balance.remote || 0} DBC</span>
+                        <span>Off-chain: ${offChainTxs} tx(s)</span>
+                    </div>
+                `;
+                
+                return div.outerHTML;
+            }).join('');
+        }
+
+        // Update node status
+        function updateNodeStatus(isOnline) {
+            const indicator = document.getElementById('nodeStatusIndicator');
+            const text = document.getElementById('nodeStatusText');
+            
+            if (isOnline) {
+                indicator.classList.remove('offline');
+                text.textContent = 'Live';
+            } else {
+                indicator.classList.add('offline');
+                text.textContent = 'Offline';
+            }
+        }
+
+        // Action: Mine Block
+        async function mineBlock() {
+            try {
+                const response = await fetch(`${API_BASE}/mine`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (!response.ok) throw new Error('Failed to mine block');
+                
+                const data = await response.json();
+                showToast('Block mined successfully! Hash: ' + (data.hash || data.blockHash || 'Unknown'), 'success');
+                
+                // Refresh data immediately
+                await Promise.all([fetchBlocks(), fetchMempool(), fetchStats()]);
+            } catch (error) {
+                showToast('Error mining block: ' + error.message, 'error');
+            }
+        }
+
+        // Action: Open Channel
+        async function openChannel() {
+            try {
+                // For demo purposes, use a default participant
+                const participant = prompt('Enter participant address:', '0x' + 'a'.repeat(40));
+                if (!participant) return;
+                
+                const response = await fetch(`${API_BASE}/channels`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        participant: participant,
+                        amount: 100
+                    })
+                });
+                
+                if (!response.ok) throw new Error('Failed to open channel');
+                
+                const data = await response.json();
+                showToast('Channel opened! ID: ' + (data.id || data.channelId || 'Unknown'), 'success');
+                
+                // Refresh data immediately
+                await Promise.all([fetchChannels(), fetchStats()]);
+            } catch (error) {
+                showToast('Error opening channel: ' + error.message, 'error');
+            }
+        }
+
+        // Refresh all data
+        async function refreshData() {
+            showToast('Refreshing data...', 'info');
+            await loadData();
+            showToast('Data refreshed!', 'success');
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const icons = {
+                success: '&#x2713;',
+                error: '&#x2717;',
+                info: '&#x2139;'
+            };
+            
+            toast.innerHTML = `
+                <span class="toast-icon">${icons[type] || '&#x2139;'}</span>
+                <span class="toast-message">${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                toast.style.animation = 'slideUp 0.3s ease-out reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+
+        // Clear all toasts
+        function clearToasts() {
+            const container = document.getElementById('toastContainer');
+            container.innerHTML = '';
+            showToast('All toasts cleared!', 'info');
+        }
+
+        // Setup GSAP animations
+        function setupAnimations() {
+            // Animate header
+            gsap.from('.header', {
+                y: -20,
+                opacity: 0,
+                duration: 0.5,
+                ease: 'power2.out'
+            });
+            
+            // Animate stats bar
+            gsap.from('.stats-bar', {
+                y: -20,
+                opacity: 0,
+                duration: 0.5,
+                ease: 'power2.out',
+                delay: 0.1
+            });
+            
+            // Animate panels
+            gsap.from('.panel', {
+                y: 20,
+                opacity: 0,
+                duration: 0.5,
+                ease: 'power2.out',
+                stagger: 0.1,
+                delay: 0.2
+            });
+        }
+
+        // Format uptime
+        function formatUptime(seconds) {
+            if (seconds < 60) return `${seconds}s`;
+            if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+            if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
+            return `${Math.floor(seconds / 86400)}d`;
+        }
+
+        // Fallback data for demo mode
+        function generateFallbackData() {
+            // If API is not available, generate some demo data
+            if (blocks.length === 0) {
+                blocks = Array.from({ length: 10 }, (_, i) => ({
+                    index: 1000 - i,
+                    hash: '0x' + Math.random().toString(16).substring(2, 66),
+                    transactions: Math.floor(Math.random() * 10),
+                    timestamp: Date.now() - (i * 60000)
+                }));
+                renderBlocks();
+            }
+            
+            if (mempool.length === 0) {
+                mempool = Array.from({ length: 5 }, () => ({
+                    hash: '0x' + Math.random().toString(16).substring(2, 66),
+                    amount: (Math.random() * 100).toFixed(2)
+                }));
+                renderMempool();
+            }
+            
+            if (channels.length === 0) {
+                channels = Array.from({ length: 3 }, (_, i) => ({
+                    id: i + 1,
+                    status: Math.random() > 0.3 ? 'open' : 'closed',
+                    participants: ['0x' + 'a'.repeat(40), '0x' + 'b'.repeat(40)],
+                    balance: { local: 50, remote: 50 },
+                    offChainTxs: Math.floor(Math.random() * 100)
+                }));
+                renderChannels();
+            }
+            
+            if (Object.keys(stats).length === 0) {
+                stats = {
+                    blockHeight: 1000,
+                    connectedPeers: 8,
+                    pendingTxs: 5
+                };
+                updateStats();
+            }
+            
+            // Update node status display
+            document.getElementById('nodeAddress').textContent = '127.0.0.1';
+            document.getElementById('nodePort').textContent = '3000';
+            document.getElementById('nodeUptime').textContent = '24h';
+            document.getElementById('nodeVersion').textContent = 'v1.0.0';
+            document.getElementById('connectedPeers').textContent = '8';
+            updateNodeStatus(true);
+        }
+
+        // Fallback polling if API fails
+        setTimeout(() => {
+            if (blocks.length === 0 && mempool.length === 0 && channels.length === 0) {
+                generateFallbackData();
+                showToast('Using demo data (API not available)', 'info');
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
