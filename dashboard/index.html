@@ -693,10 +693,10 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <script>
-        // State
-        let blocks = [];
-        let mempool = [];
-        let channels = [];
+        // State — null means not yet fetched (forces first render)
+        let blocks = null;
+        let mempool = null;
+        let channels = null;
         let stats = {};
         let lastBlockCount = 0;
         let lastTxCount = 0;
@@ -749,9 +749,9 @@
                 if (!response.ok) throw new Error('Failed to fetch blocks');
                 const data = await response.json();
                 const chain = (data.chain || []).slice().reverse(); // newest first
-                
-                if (JSON.stringify(blocks) !== JSON.stringify(chain)) {
-                    const newBlocks = chain.filter(b => !blocks.some(existing => existing.hash === b.hash));
+
+                if (blocks === null || JSON.stringify(blocks) !== JSON.stringify(chain)) {
+                    const newBlocks = blocks === null ? chain : chain.filter(b => !blocks.some(e => e.hash === b.hash));
                     blocks = chain;
                     renderBlocks(newBlocks);
                     if (blocks.length > 0) {
@@ -770,9 +770,9 @@
                 const response = await fetch(`${API_BASE}/transactions/pending`);
                 if (!response.ok) throw new Error('Failed to fetch mempool');
                 const data = await response.json();
-                
-                if (JSON.stringify(mempool) !== JSON.stringify(data)) {
-                    const newTxs = data.filter(t => !mempool.some(existing => existing.hash === t.hash));
+
+                if (mempool === null || JSON.stringify(mempool) !== JSON.stringify(data)) {
+                    const newTxs = mempool === null ? data : data.filter(t => !mempool.some(e => e.hash === t.hash));
                     mempool = data;
                     renderMempool(newTxs);
                     document.getElementById('mempoolCount').textContent = mempool.length;
@@ -789,12 +789,13 @@
                 const response = await fetch(`${API_BASE}/channels`);
                 if (!response.ok) throw new Error('Failed to fetch channels');
                 const data = await response.json();
-                
-                if (JSON.stringify(channels) !== JSON.stringify(data)) {
+
+                if (channels === null || JSON.stringify(channels) !== JSON.stringify(data)) {
                     channels = data;
                     renderChannels();
+                    const open = channels.filter(c => c.isOpen).length;
                     document.getElementById('channelsCount').textContent = channels.length;
-                    document.getElementById('activeChannels').textContent = channels.filter(c => c.status === 'open').length;
+                    document.getElementById('activeChannels').textContent = open;
                 }
             } catch (error) {
                 console.error('Error fetching channels:', error);
@@ -881,30 +882,22 @@
         // Render blocks
         function renderBlocks(newBlocks = []) {
             const container = document.getElementById('blocksList');
+            // Always clear skeletons on first render
+            if (container.querySelector('.skeleton')) container.innerHTML = '';
 
-            if (blocks.length === 0) {
+            if (!blocks || blocks.length === 0) {
                 container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#x25c6;</div><div>No blocks yet</div></div>';
                 return;
             }
-
-            // Clear skeletons / old content on first real render
-            if (container.querySelector('.skeleton')) {
-                container.innerHTML = '';
-            }
-
-            // Insert new blocks with animation at top
             if (newBlocks.length > 0) {
                 newBlocks.forEach(block => {
-                    const blockElement = createBlockElement(block);
-                    container.insertBefore(blockElement, container.firstChild);
-                    gsap.from(blockElement, {
-                        x: -20, opacity: 0, duration: 0.3, ease: 'power2.out',
-                        onComplete: () => blockElement.classList.add('visible')
-                    });
+                    const el = createBlockElement(block);
+                    container.insertBefore(el, container.firstChild);
+                    gsap.from(el, { x: -20, opacity: 0, duration: 0.3, ease: 'power2.out',
+                        onComplete: () => el.classList.add('visible') });
                 });
             } else if (container.children.length === 0) {
-                // Full render if container is empty
-                container.innerHTML = blocks.map(block => createBlockElement(block).outerHTML).join('');
+                container.innerHTML = blocks.map(b => createBlockElement(b).outerHTML).join('');
                 container.querySelectorAll('.block-item').forEach(el => el.classList.add('visible'));
             }
         }
@@ -929,17 +922,18 @@
         // Render mempool
         function renderMempool(newTxs = []) {
             const container = document.getElementById('mempoolList');
-            if (mempool.length === 0) {
+            if (container.querySelector('.skeleton')) container.innerHTML = '';
+
+            if (!mempool || mempool.length === 0) {
                 container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#x2713;</div><div>Mempool is empty</div></div>';
                 return;
             }
-            if (container.querySelector('.skeleton')) container.innerHTML = '';
             if (newTxs.length > 0) {
                 newTxs.forEach(tx => {
-                    const txElement = createTxElement(tx);
-                    container.insertBefore(txElement, container.firstChild);
-                    gsap.from(txElement, { x: -20, opacity: 0, duration: 0.3, ease: 'power2.out',
-                        onComplete: () => txElement.classList.add('visible') });
+                    const el = createTxElement(tx);
+                    container.insertBefore(el, container.firstChild);
+                    gsap.from(el, { x: -20, opacity: 0, duration: 0.3, ease: 'power2.out',
+                        onComplete: () => el.classList.add('visible') });
                 });
             } else if (container.children.length === 0) {
                 container.innerHTML = mempool.map(tx => createTxElement(tx).outerHTML).join('');
@@ -966,8 +960,9 @@
         // Render channels
         function renderChannels() {
             const container = document.getElementById('channelsList');
-            
-            if (channels.length === 0) {
+            if (container.querySelector('.skeleton')) container.innerHTML = '';
+
+            if (!channels || channels.length === 0) {
                 container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#x25c8;</div><div>No channels yet</div></div>';
                 return;
             }
@@ -1037,26 +1032,24 @@
 
         // Action: Open Channel
         async function openChannel() {
+            const addr1 = prompt('Participant 1 address:', 'alice');
+            if (!addr1) return;
+            const addr2 = prompt('Participant 2 address:', 'bob');
+            if (!addr2) return;
+            const bal = parseInt(prompt('Initial balance each:', '100'), 10) || 100;
             try {
-                // For demo purposes, use a default participant
-                const participant = prompt('Enter participant address:', '0x' + 'a'.repeat(40));
-                if (!participant) return;
-                
                 const response = await fetch(`${API_BASE}/channels`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        participant: participant,
-                        amount: 100
+                        participants: [addr1, addr2],
+                        initialBalances: [bal, bal]
                     })
                 });
-                
                 if (!response.ok) throw new Error('Failed to open channel');
-                
                 const data = await response.json();
-                showToast('Channel opened! ID: ' + (data.id || data.channelId || 'Unknown'), 'success');
-                
-                // Refresh data immediately
+                showToast('Channel opened! ID: ' + (data.id || 'Unknown'), 'success');
+                channels = null; // force re-fetch
                 await Promise.all([fetchChannels(), fetchStats()]);
             } catch (error) {
                 showToast('Error opening channel: ' + error.message, 'error');
