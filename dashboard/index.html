@@ -881,31 +881,29 @@
         // Render blocks
         function renderBlocks(newBlocks = []) {
             const container = document.getElementById('blocksList');
-            
+
             if (blocks.length === 0) {
                 container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#x25c6;</div><div>No blocks yet</div></div>';
                 return;
             }
 
-            // Only render new blocks with animation
+            // Clear skeletons / old content on first real render
+            if (container.querySelector('.skeleton')) {
+                container.innerHTML = '';
+            }
+
+            // Insert new blocks with animation at top
             if (newBlocks.length > 0) {
                 newBlocks.forEach(block => {
                     const blockElement = createBlockElement(block);
                     container.insertBefore(blockElement, container.firstChild);
-                    
-                    // Animate with GSAP
                     gsap.from(blockElement, {
-                        x: -20,
-                        opacity: 0,
-                        duration: 0.3,
-                        ease: 'power2.out',
-                        onComplete: () => {
-                            blockElement.classList.add('visible');
-                        }
+                        x: -20, opacity: 0, duration: 0.3, ease: 'power2.out',
+                        onComplete: () => blockElement.classList.add('visible')
                     });
                 });
-            } else {
-                // Full render
+            } else if (container.children.length === 0) {
+                // Full render if container is empty
                 container.innerHTML = blocks.map(block => createBlockElement(block).outerHTML).join('');
                 container.querySelectorAll('.block-item').forEach(el => el.classList.add('visible'));
             }
@@ -915,47 +913,35 @@
         function createBlockElement(block) {
             const div = document.createElement('div');
             div.className = 'block-item';
-            
-            const index = block.index || block.height || block.number || '0';
-            const hash = block.hash || block.id || '0'.repeat(64);
-            const txCount = block.transactions || block.txCount || block.txs || 0;
+            const index = block.index ?? '0';
+            const hash = block.hash || '0'.repeat(64);
+            const txCount = Array.isArray(block.transactions) ? block.transactions.length : (block.txCount || 0);
             const timestamp = block.timestamp ? new Date(block.timestamp).toLocaleTimeString() : '-';
-            
             div.innerHTML = `
                 <div class="block-index">#${index}</div>
                 <div class="block-hash" title="${hash}">${hash.substring(0, 16)}...${hash.substring(hash.length - 4)}</div>
                 <div class="block-tx">${txCount} tx(s)</div>
                 <div class="block-time">${timestamp}</div>
             `;
-            
             return div;
         }
 
         // Render mempool
         function renderMempool(newTxs = []) {
             const container = document.getElementById('mempoolList');
-            
             if (mempool.length === 0) {
                 container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#x2713;</div><div>Mempool is empty</div></div>';
                 return;
             }
-
+            if (container.querySelector('.skeleton')) container.innerHTML = '';
             if (newTxs.length > 0) {
                 newTxs.forEach(tx => {
                     const txElement = createTxElement(tx);
                     container.insertBefore(txElement, container.firstChild);
-                    
-                    gsap.from(txElement, {
-                        x: -20,
-                        opacity: 0,
-                        duration: 0.3,
-                        ease: 'power2.out',
-                        onComplete: () => {
-                            txElement.classList.add('visible');
-                        }
-                    });
+                    gsap.from(txElement, { x: -20, opacity: 0, duration: 0.3, ease: 'power2.out',
+                        onComplete: () => txElement.classList.add('visible') });
                 });
-            } else {
+            } else if (container.children.length === 0) {
                 container.innerHTML = mempool.map(tx => createTxElement(tx).outerHTML).join('');
                 container.querySelectorAll('.tx-item').forEach(el => el.classList.add('visible'));
             }
@@ -1079,9 +1065,7 @@
 
         // Refresh all data
         async function refreshData() {
-            showToast('Refreshing data...', 'info');
             await loadData();
-            showToast('Data refreshed!', 'success');
         }
 
         // Show toast notification
