@@ -195,21 +195,9 @@ class BlockchainServer {
             res.json({ status: 'healthy', timestamp: Date.now() });
         });
 
-        // Root endpoint
+        // Root endpoint — serve the dashboard
         this.app.get('/', (req, res) => {
-            res.json({
-                name: 'Dynamic Interconnection Blockchain',
-                version: '1.0.0',
-                endpoints: {
-                    blockchain: '/api/blockchain',
-                    transactions: '/api/transactions',
-                    mine: '/api/mine',
-                    balance: '/api/balance/:address',
-                    channels: '/api/channels',
-                    nodeStatus: '/api/node/status',
-                    health: '/api/health'
-                }
-            });
+            res.sendFile(require('path').resolve(__dirname, '../dashboard/index.html'));
         });
     }
 
