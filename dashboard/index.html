@@ -745,18 +745,18 @@
         // Fetch blocks
         async function fetchBlocks() {
             try {
-                const response = await fetch(`${API_BASE}/blocks?limit=20`);
+                const response = await fetch(`${API_BASE}/blockchain`);
                 if (!response.ok) throw new Error('Failed to fetch blocks');
                 const data = await response.json();
+                const chain = (data.chain || []).slice().reverse(); // newest first
                 
-                if (JSON.stringify(blocks) !== JSON.stringify(data)) {
-                    const newBlocks = data.filter(b => !blocks.some(existing => existing.hash === b.hash));
-                    blocks = data;
+                if (JSON.stringify(blocks) !== JSON.stringify(chain)) {
+                    const newBlocks = chain.filter(b => !blocks.some(existing => existing.hash === b.hash));
+                    blocks = chain;
                     renderBlocks(newBlocks);
-                    
-                    // Update latest block index in header
                     if (blocks.length > 0) {
-                        document.getElementById('latestBlockIndex').textContent = blocks[0].index || blocks[0].height || '0';
+                        document.getElementById('latestBlockIndex').textContent = blocks[0].index;
+                        document.getElementById('blockHeight').textContent = blocks[0].index;
                     }
                 }
             } catch (error) {
@@ -767,7 +767,7 @@
         // Fetch mempool
         async function fetchMempool() {
             try {
-                const response = await fetch(`${API_BASE}/mempool`);
+                const response = await fetch(`${API_BASE}/transactions/pending`);
                 if (!response.ok) throw new Error('Failed to fetch mempool');
                 const data = await response.json();
                 
@@ -801,15 +801,13 @@
             }
         }
 
-        // Fetch stats
+        // Fetch stats (derived from node status)
         async function fetchStats() {
             try {
-                const response = await fetch(`${API_BASE}/stats`);
+                const response = await fetch(`${API_BASE}/node/status`);
                 if (!response.ok) throw new Error('Failed to fetch stats');
                 const data = await response.json();
-                
                 stats = data;
-                updateStats();
                 calculateTPS();
             } catch (error) {
                 console.error('Error fetching stats:', error);
@@ -822,24 +820,28 @@
                 const response = await fetch(`${API_BASE}/node/status`);
                 if (!response.ok) throw new Error('Failed to fetch node status');
                 const data = await response.json();
-                
                 document.getElementById('nodeAddress').textContent = data.address || '-';
                 document.getElementById('nodePort').textContent = data.port || '-';
                 document.getElementById('nodeUptime').textContent = formatUptime(data.uptime || 0);
-                document.getElementById('nodeVersion').textContent = data.version || '-';
-                document.getElementById('connectedPeers').textContent = data.peers || '0';
+                document.getElementById('nodeVersion').textContent = data.version || 'v1.0.0';
+                document.getElementById('connectedPeers').textContent = data.peerCount ?? '0';
+                updateNodeStatus(true);
             } catch (error) {
                 console.error('Error fetching node status:', error);
+                updateNodeStatus(false);
             }
         }
 
         // Update stats display
         function updateStats() {
-            if (stats.blockHeight !== undefined) {
-                document.getElementById('blockHeight').textContent = stats.blockHeight;
+            if (stats.blockchainHeight !== undefined) {
+                document.getElementById('blockHeight').textContent = stats.blockchainHeight;
             }
-            if (stats.connectedPeers !== undefined) {
-                document.getElementById('connectedPeers').textContent = stats.connectedPeers;
+            if (stats.peerCount !== undefined) {
+                document.getElementById('connectedPeers').textContent = stats.peerCount;
+            }
+            if (stats.channelStats) {
+                document.getElementById('activeChannels').textContent = stats.channelStats.open || 0;
             }
         }
 
@@ -1153,62 +1155,9 @@
             return `${Math.floor(seconds / 86400)}d`;
         }
 
-        // Fallback data for demo mode
-        function generateFallbackData() {
-            // If API is not available, generate some demo data
-            if (blocks.length === 0) {
-                blocks = Array.from({ length: 10 }, (_, i) => ({
-                    index: 1000 - i,
-                    hash: '0x' + Math.random().toString(16).substring(2, 66),
-                    transactions: Math.floor(Math.random() * 10),
-                    timestamp: Date.now() - (i * 60000)
-                }));
-                renderBlocks();
-            }
-            
-            if (mempool.length === 0) {
-                mempool = Array.from({ length: 5 }, () => ({
-                    hash: '0x' + Math.random().toString(16).substring(2, 66),
-                    amount: (Math.random() * 100).toFixed(2)
-                }));
-                renderMempool();
-            }
-            
-            if (channels.length === 0) {
-                channels = Array.from({ length: 3 }, (_, i) => ({
-                    id: i + 1,
-                    status: Math.random() > 0.3 ? 'open' : 'closed',
-                    participants: ['0x' + 'a'.repeat(40), '0x' + 'b'.repeat(40)],
-                    balance: { local: 50, remote: 50 },
-                    offChainTxs: Math.floor(Math.random() * 100)
-                }));
-                renderChannels();
-            }
-            
-            if (Object.keys(stats).length === 0) {
-                stats = {
-                    blockHeight: 1000,
-                    connectedPeers: 8,
-                    pendingTxs: 5
-                };
-                updateStats();
-            }
-            
-            // Update node status display
-            document.getElementById('nodeAddress').textContent = '127.0.0.1';
-            document.getElementById('nodePort').textContent = '3000';
-            document.getElementById('nodeUptime').textContent = '24h';
-            document.getElementById('nodeVersion').textContent = 'v1.0.0';
-            document.getElementById('connectedPeers').textContent = '8';
-            updateNodeStatus(true);
-        }
-
-        // Fallback polling if API fails
-        setTimeout(() => {
-            if (blocks.length === 0 && mempool.length === 0 && channels.length === 0) {
-                generateFallbackData();
-                showToast('Using demo data (API not available)', 'info');
-            }
+        // Retry connection if offline
+        setInterval(() => {
+            fetchNodeStatus();
         }, 5000);
     </script>
 </body>
