@@ -5,6 +5,8 @@
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green?logo=node.js)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 [![Architecture: Hybrid](https://img.shields.io/badge/Architecture-Hybrid%20Blockchain-purple)]()
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-%E2%9D%A4-pink?logo=github-sponsors)](https://github.com/sponsors/ziuus)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
 ---
 
@@ -232,12 +234,32 @@ Dynamic-Blockchain/
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please open an issue first to discuss what you'd like to change.
+All contributions are welcome — from beginners to experts. You don't need to know everything about blockchain to help!
 
-1. Fork the repo
-2. Create a feature branch (`git checkout -b feat/your-feature`)
-3. Commit with conventional commits (`feat:`, `fix:`, `docs:`)
-4. Open a Pull Request
+**Ways to contribute:**
+
+| Type | How |
+|------|-----|
+| 🐛 Bug report | [Open an issue](https://github.com/ziuus/Dynamic-Blockchain/issues/new) |
+| 💡 Feature idea | [Start a discussion](https://github.com/ziuus/Dynamic-Blockchain/discussions) |
+| 🔧 Code | Fork → branch → PR (see [CONTRIBUTING.md](./CONTRIBUTING.md)) |
+| 📖 Docs | Fix typos, improve explanations, add examples |
+| ⭐ Star | Helps the project get discovered — much appreciated! |
+
+---
+
+## 💖 Support the Project
+
+This is an independent open-source project built and maintained in spare time. If it's useful to you — or you just want to see it grow — any support means a lot:
+
+- ⭐ **Star the repo** — it's free and helps enormously with discovery
+- 🐦 **Share it** — tweet it, post it, tell a friend
+- 💰 **Sponsor** — [github.com/sponsors/ziuus](https://github.com/sponsors/ziuus)
+- 🛠️ **Contribute** — code, docs, tests, ideas — all welcome
+- 🐛 **Report bugs** — helps everyone using the project
+
+> Every star, share, and contribution directly funds time to work on the roadmap:
+> PoS consensus · LevelDB storage · multi-hop routing · test suite · Docker devnet
 
 ---
 
