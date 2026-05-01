@@ -848,30 +848,22 @@
         // Calculate TPS
         function calculateTPS() {
             const now = Date.now();
-            
-            // Add current counts to history
+            // Guard: skip if state not yet loaded
+            if (!blocks || !mempool) return;
+
             txHistory.push({
                 timestamp: now,
                 blockCount: blocks.length,
                 txCount: mempool.length
             });
-            
-            // Keep only recent history
-            if (txHistory.length > MAX_TX_HISTORY) {
-                txHistory.shift();
-            }
-            
-            // Calculate TPS if we have enough data
+            if (txHistory.length > MAX_TX_HISTORY) txHistory.shift();
+
             if (txHistory.length >= 2) {
                 const oldest = txHistory[0];
                 const newest = txHistory[txHistory.length - 1];
-                const timeDiff = (newest.timestamp - oldest.timestamp) / 1000; // seconds
-                
+                const timeDiff = (newest.timestamp - oldest.timestamp) / 1000;
                 if (timeDiff > 0) {
-                    const txDiff = newest.txCount - oldest.txCount;
-                    const blockDiff = newest.blockCount - oldest.blockCount;
-                    const tps = (txDiff + blockDiff) / timeDiff;
-                    
+                    const tps = ((newest.txCount - oldest.txCount) + (newest.blockCount - oldest.blockCount)) / timeDiff;
                     document.getElementById('tpsValue').textContent = tps.toFixed(2);
                     document.getElementById('tpsDisplay').textContent = tps.toFixed(2);
                 }
@@ -881,23 +873,28 @@
         // Render blocks
         function renderBlocks(newBlocks = []) {
             const container = document.getElementById('blocksList');
-            // Always clear skeletons on first render
             if (container.querySelector('.skeleton')) container.innerHTML = '';
 
             if (!blocks || blocks.length === 0) {
                 container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#x25c6;</div><div>No blocks yet</div></div>';
                 return;
             }
+
+            // Get hashes already in the DOM to prevent duplicates
+            const rendered = new Set([...container.querySelectorAll('.block-item')].map(el => el.dataset.hash));
+
             if (newBlocks.length > 0) {
-                newBlocks.forEach(block => {
+                // Remove empty-state if present
+                const empty = container.querySelector('.empty-state');
+                if (empty) empty.remove();
+
+                newBlocks.filter(b => !rendered.has(b.hash)).forEach(block => {
                     const el = createBlockElement(block);
                     container.insertBefore(el, container.firstChild);
-                    gsap.from(el, { x: -20, opacity: 0, duration: 0.3, ease: 'power2.out',
-                        onComplete: () => el.classList.add('visible') });
+                    gsap.from(el, { x: -20, opacity: 0, duration: 0.3, ease: 'power2.out' });
                 });
             } else if (container.children.length === 0) {
                 container.innerHTML = blocks.map(b => createBlockElement(b).outerHTML).join('');
-                container.querySelectorAll('.block-item').forEach(el => el.classList.add('visible'));
             }
         }
 
@@ -905,6 +902,7 @@
         function createBlockElement(block) {
             const div = document.createElement('div');
             div.className = 'block-item';
+            div.dataset.hash = block.hash || '';
             const index = block.index ?? '0';
             const hash = block.hash || '0'.repeat(64);
             const txCount = Array.isArray(block.transactions) ? block.transactions.length : (block.txCount || 0);
